@@ -31,7 +31,7 @@ def pick(bias_list):
 
 
 class BannerManager(models.Manager):
-    def biased_choice(self, place):
+    def biased_banners(self, place):
         now = datetime.now()
 
         # проверка условий:
@@ -51,6 +51,8 @@ class BannerManager(models.Manager):
 
         calculations = queryset.aggregate(weight_sum=models.Sum('weight'))
 
-        banners = queryset.extra(select={'bias': 'weight/%f' % calculations['weight_sum']})
+        return queryset.extra(select={'bias': 'weight/%f' % calculations['weight_sum']})
 
+    def biased_choices(self, place):
+        banners = self.biased_banners(place)
         return pick([(b, b.bias) for b in banners])

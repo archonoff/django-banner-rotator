@@ -65,3 +65,31 @@ def banner(parser, token):
         varname = None
 
     return BannerNode(place_slug, varname)
+
+
+class BannerListNode(template.Node):
+    def __init__(self, place_slug, num, context_name):
+        self.place_slug = place_slug
+        self.num = num
+        self.context_name = context_name
+
+    def render(self, context):
+        try:
+            place = Place.objects.get(slug=self.place_slug)
+            context[self.context_name] = Banner.objects.biased_banners(place).order_by('?')[:self.num]
+        except:
+            context[self.context_name] = []
+        return ""
+
+
+@register.tag
+def list_banners(parser, token):
+    msg = _("list_banners takes the syntax slug number_of_banners as context_variable")
+    try:
+        tag_name, place_slug, num, _as, context_name = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError(msg)
+
+    if _as != 'as':
+        raise template.TemplateSyntaxError(msg)
+    return BannerListNode(place_slug, num, context_name)

@@ -5,7 +5,7 @@ from functools import update_wrapper
 
 from django import forms, template
 from django.contrib import admin
-from django.contrib.admin.util import unquote
+from django.contrib.admin.utils import unquote
 from django.db import models
 from django.shortcuts import get_object_or_404, render_to_response
 from django.utils.text import capfirst
@@ -54,11 +54,7 @@ class BannerAdmin(admin.ModelAdmin):
     object_log_clicks_template = None
 
     def get_urls(self):
-        try:
-            # Django 1.4
-            from django.conf.urls import patterns, url
-        except ImportError:
-            from django.conf.urls.defaults import patterns, url
+        from django.conf.urls import url
 
         def wrap(view):
             def wrapper(*args, **kwargs):
@@ -67,14 +63,14 @@ class BannerAdmin(admin.ModelAdmin):
 
         info = self.model._meta.app_label, self.model._meta.model_name
 
-        urlpatterns = patterns('',
+        urlpatterns = [
             url(r'^$', wrap(self.changelist_view), name='%s_%s_changelist' % info),
             url(r'^add/$', wrap(self.add_view), name='%s_%s_add' % info),
             url(r'^(.+)/history/$', wrap(self.history_view), name='%s_%s_history' % info),
             url(r'^(.+)/delete/$', wrap(self.delete_view), name='%s_%s_delete' % info),
             url(r'^(.+)/log/clicks/$', wrap(self.log_clicks_view), name='%s_%s_log_clicks' % info),
             url(r'^(.+)/$', wrap(self.change_view), name='%s_%s_change' % info),
-        )
+        ]
         return urlpatterns
 
     def log_clicks_view(self, request, object_id, extra_context=None):

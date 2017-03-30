@@ -1,14 +1,13 @@
 #-*- coding:utf-8 -*-
-
+from __future__ import unicode_literals
 import logging
+from functools import update_wrapper
 
 from django import forms, template
 from django.contrib import admin
 from django.contrib.admin.util import unquote
 from django.db import models
 from django.shortcuts import get_object_or_404, render_to_response
-from django.utils.encoding import force_unicode
-from django.utils.functional import update_wrapper
 from django.utils.text import capfirst
 from django.utils.translation import ugettext_lazy as _
 
@@ -17,6 +16,7 @@ from banner_rotator.models import Campaign, Place, Banner, Click
 
 class PlaceAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'size_str')
+    prepopulated_fields = {'slug': ('name',)}
 
 
 class CampaignBannerInline(admin.StackedInline):
@@ -36,7 +36,7 @@ class CampaignAdmin(admin.ModelAdmin):
 
 
 class BannerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'campaign', 'weight', 'url', 'admin_views_str', 'admin_clicks_str', 'is_active')
+    list_display = ('name', 'campaign', 'weight', 'url', 'views', 'is_active')
     list_filter = ('campaign', 'places', 'is_active')
     date_hierarchy = 'created_at'
     fieldsets = (
@@ -65,7 +65,7 @@ class BannerAdmin(admin.ModelAdmin):
                 return self.admin_site.admin_view(view)(*args, **kwargs)
             return update_wrapper(wrapper, view)
 
-        info = self.model._meta.app_label, self.model._meta.module_name
+        info = self.model._meta.app_label, self.model._meta.model_name
 
         urlpatterns = patterns('',
             url(r'^$', wrap(self.changelist_view), name='%s_%s_changelist' % info),
@@ -86,7 +86,7 @@ class BannerAdmin(admin.ModelAdmin):
 
         context = {
             'title': _('Log clicks'),
-            'module_name': capfirst(force_unicode(opts.verbose_name_plural)),
+            'module_name': capfirst(opts.verbose_name_plural),
             'object': obj,
             'app_label': app_label,
             'log_clicks': Click.objects.filter(banner=obj).order_by('-datetime')

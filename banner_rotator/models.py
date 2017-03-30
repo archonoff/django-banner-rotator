@@ -1,5 +1,6 @@
 #-*- coding:utf-8 -*-
 
+from __future__ import unicode_literals
 try:
     from hashlib import md5
 except ImportError:
@@ -20,7 +21,7 @@ def get_banner_upload_to(instance, filename):
     """
     filename_parts = filename.split('.')
     ext = '.%s' % filename_parts[-1] if len(filename_parts) > 1 else ''
-    new_filename = md5(u'%s-%s' % (filename.encode('utf-8'), time())).hexdigest()
+    new_filename = md5(('%s-%s' % (filename, time())).encode('utf-8')).hexdigest()
     return 'banner/%s%s' % (new_filename, ext)
 
 
@@ -80,7 +81,6 @@ class Banner(models.Model):
     url_target = models.CharField(_('Target'), max_length=10, choices=URL_TARGET_CHOICES, default='')
 
     views = models.IntegerField(_('Views'), default=0)
-    clicks = models.IntegerField(_('Clicks'), default=0)
     max_views = models.IntegerField(_('Max views'), default=0)
     max_clicks = models.IntegerField(_('Max clicks'), default=0)
 
@@ -117,27 +117,8 @@ class Banner(models.Model):
         return ''
 
     def click(self, request):
-        self.clicks = models.F('clicks') + 1
-        self.save()
-
-        place = None
-        if 'place' in request.GET:
-            place = request.GET['place']
-        elif 'place_slug' in request.GET:
-            place = request.GET['place_slug']
-
-        try:
-            place_qs = Place.objects
-            if 'place' in request.GET:
-                place = place_qs.get(id=request.GET['place'])
-            elif 'place_slug' in request.GET:
-                place = place_qs.get(slug=request.GET['place_slug'])
-        except Place.DoesNotExist:
-            place = None
-
         click = {
             'banner': self,
-            'place': place,
             'ip': request.META.get('REMOTE_ADDR'),
             'user_agent': request.META.get('HTTP_USER_AGENT'),
             'referrer': request.META.get('HTTP_REFERER'),
@@ -166,11 +147,9 @@ class Banner(models.Model):
 
 
 class Click(models.Model):
-    banner = models.ForeignKey(Banner, related_name="clicks_list")
-    place = models.ForeignKey(Place, related_name="clicks_list", null=True, default=None)
+    banner = models.ForeignKey(Banner, related_name="clicks")
     user = models.ForeignKey(User, null=True, blank=True, related_name="banner_clicks")
     datetime = models.DateTimeField("Clicked at", auto_now_add=True)
-    ip = models.IPAddressField(null=True, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(validators=[MaxLengthValidator(1000)], null=True, blank=True)
     referrer = models.URLField(null=True, blank=True)
-
